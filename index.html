@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upload Gambar Online Gratis dan Aman - Image Uploader</title>
+  <meta name="description" content="Layanan upload gambar gratis dan cepat. Unggah gambar JPG, PNG, atau WebP dengan link langsung. Aman, ringan, dan mudah digunakan.">
+  <meta name="keywords" content="upload gambar, hosting gambar gratis, unggah gambar online, image uploader, share gambar jpg png webp">
+  <meta name="author" content="ImageUploader">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="icon" href="https://i.pinimg.com/736x/0d/71/2a/0d712a0b6805c0b44386339048bdfce5.jpg"/>
+  <style>
+    .dropzone {
+      border: 2px dashed #cbd5e0;
+      transition: all 0.3s ease;
+    }
+    .dropzone.active {
+      border-color: #3b82f6;
+      background-color: #f0f7ff;
+    }
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .progress-bar {
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen flex flex-col">
+  <header class="py-6 text-center">
+    <h1 class="text-3xl font-bold text-gray-800">Upload Gambar Online</h1>
+    <h2 class="text-lg text-gray-700 mt-1">Gratis, Aman, dan Langsung Dapat Link Gambar</h2>
+    <p class="text-gray-600 mt-2">Maksimal ukuran gambar 4.5MB (JPG, PNG, WebP)</p>
+  </header>
+
+  <main class="flex-grow flex items-center justify-center px-4">
+    <div class="w-full max-w-2xl">
+      <section class="bg-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl overflow-hidden">
+        <div class="p-6">
+          <div id="upload-container" class="dropzone rounded-lg p-8 text-center cursor-pointer" aria-label="Tempat unggah gambar">
+            <div class="mx-auto w-24 h-24 mb-4 text-blue-500">
+              <i class="fas fa-cloud-upload-alt text-6xl" aria-hidden="true"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-700">Tarik & Lepas Gambar Anda Di Sini</h3>
+            <p class="text-gray-500 mt-2">atau klik untuk memilih file</p>
+            <input type="file" id="file-input" class="hidden" accept="image/*" multiple>
+            <div class="mt-4">
+              <button id="browse-btn" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" aria-label="Pilih gambar">Pilih Gambar</button>
+            </div>
+          </div>
+
+          <div id="upload-progress" class="mt-6 hidden">
+            <div class="flex justify-between mb-2">
+              <span class="font-medium text-gray-700">Mengunggah...</span>
+              <span id="progress-percent" class="text-blue-600">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div id="progress-bar" class="progress-bar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div id="file-list" class="mt-6 space-y-3 hidden"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="py-6 text-center text-gray-500 text-sm">
+    <p>© <span id="year"></span> UploadGambar.ID. Hak cipta dilindungi.</p>
+  </footer>
+
+  <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 fade-in">
+      <div class="text-center">
+        <div class="mx-auto w-20 h-20 mb-4 text-green-500">
+          <i class="fas fa-check-circle text-5xl" aria-hidden="true"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">Upload Berhasil!</h3>
+        <p class="text-gray-600 mb-4">Gambar Anda berhasil diunggah.</p>
+        <div class="bg-gray-100 p-3 rounded-lg mb-4">
+          <div class="flex items-center justify-between">
+            <span id="file-name" class="truncate font-medium"></span>
+            <button id="copy-btn" class="ml-2 text-blue-500 hover:text-blue-700" aria-label="Salin URL">
+              <i class="fas fa-copy"></i>
+            </button>
+          </div>
+          <div id="file-url" class="text-xs text-gray-500 truncate mt-1"></div>
+        </div>
+        <div class="flex justify-center space-x-3">
+          <button id="close-modal" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Selesai</button>
+          <a id="view-file" target="_blank" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" rel="noopener">Lihat Gambar</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear()
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const dropzone = document.getElementById('upload-container')
+      const fileInput = document.getElementById('file-input')
+      const browseBtn = document.getElementById('browse-btn')
+      const uploadProgress = document.getElementById('upload-progress')
+      const progressBar = document.getElementById('progress-bar')
+      const progressPercent = document.getElementById('progress-percent')
+      const fileList = document.getElementById('file-list')
+      const successModal = document.getElementById('success-modal')
+      const fileName = document.getElementById('file-name')
+      const fileUrl = document.getElementById('file-url')
+      const copyBtn = document.getElementById('copy-btn')
+      const closeModal = document.getElementById('close-modal')
+      const viewFile = document.getElementById('view-file')
+      let currentFileUrl = ''
+
+      ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropzone.addEventListener(e, preventDefaults, false))
+
+      function preventDefaults(e) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+
+      dropzone.addEventListener('dragenter', () => dropzone.classList.add('active'))
+      dropzone.addEventListener('dragover', () => dropzone.classList.add('active'))
+      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('active'))
+      dropzone.addEventListener('drop', () => dropzone.classList.remove('active'))
+
+      dropzone.addEventListener('drop', handleDrop, false)
+      browseBtn.addEventListener('click', () => fileInput.click())
+      fileInput.addEventListener('change', handleFiles)
+
+      function handleDrop(e) {
+        const dt = e.dataTransfer
+        const files = dt.files
+        handleFiles({ target: { files } })
+      }
+
+      function handleFiles(e) {
+        const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'))
+        if (files.length === 0) return
+
+        fileList.innerHTML = ''
+        fileList.classList.remove('hidden')
+
+        for (let file of files) {
+          if (file.size > 4.5 * 1024 * 1024) {
+            alert(`File "${file.name}" melebihi batas 4.5MB.`)
+            return
+          }
+
+          const item = document.createElement('div')
+          item.className = 'flex items-center justify-between bg-gray-50 p-3 rounded-lg'
+          item.innerHTML = `
+            <div class="flex items-center">
+              <div class="mr-3 text-blue-500"><i class="fas fa-image"></i></div>
+              <div>
+                <div class="font-medium">${file.name}</div>
+                <div class="text-xs text-gray-500">${formatFileSize(file.size)}</div>
+              </div>
+            </div>
+            <div class="text-gray-400"><i class="fas fa-ellipsis-h"></i></div>
+          `
+          fileList.appendChild(item)
+        }
+
+        uploadFiles(files)
+      }
+
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes'
+        const k = 1024
+        const sizes = ['Bytes', 'KB', 'MB', 'GB']
+        const i = Math.floor(Math.log(bytes) / Math.log(k))
+        return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
+      }
+
+      function uploadFiles(files) {
+        uploadProgress.classList.remove('hidden')
+
+        const formData = new FormData()
+        formData.append('file', files[0])
+
+        const xhr = new XMLHttpRequest()
+
+        xhr.upload.addEventListener('progress', function (e) {
+          if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100)
+            progressBar.style.width = percentComplete + '%'
+            progressPercent.textContent = percentComplete + '%'
+          }
+        })
+
+        xhr.addEventListener('load', function () {
+          if (xhr.status === 200) {
+            let response
+            try {
+              response = JSON.parse(xhr.responseText)
+            } catch (err) {
+              alert('Respons server tidak valid')
+              return
+            }
+
+            currentFileUrl = response.url || ''
+            fileName.textContent = files[0].name
+            fileUrl.textContent = currentFileUrl
+            viewFile.href = currentFileUrl
+            successModal.classList.remove('hidden')
+
+            setTimeout(() => {
+              uploadProgress.classList.add('hidden')
+              progressBar.style.width = '0%'
+              progressPercent.textContent = '0%'
+              fileList.classList.add('hidden')
+              fileInput.value = ''
+            }, 500)
+          } else {
+            alert('Upload gagal')
+            uploadProgress.classList.add('hidden')
+          }
+        })
+
+        xhr.addEventListener('error', function () {
+          alert('Upload gagal')
+          uploadProgress.classList.add('hidden')
+        })
+
+        xhr.open('POST', '/upload', true)
+        xhr.send(formData)
+      }
+
+      copyBtn.addEventListener('click', function () {
+        navigator.clipboard.writeText(currentFileUrl).then(() => {
+          const original = copyBtn.innerHTML
+          copyBtn.innerHTML = '<i class="fas fa-check"></i>'
+          setTimeout(() => {
+            copyBtn.innerHTML = original
+          }, 2000)
+        })
+      })
+
+      closeModal.addEventListener('click', function () {
+        successModal.classList.add('hidden')
+      })
+
+      successModal.addEventListener('click', function (e) {
+        if (e.target === successModal) {
+          successModal.classList.add('hidden')
+        }
+      })
+    })
+  </script>
+</body>
+  </html>
